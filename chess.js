@@ -2,11 +2,11 @@ function s(int){
     return String(int)
 }
 
-function i(str){
+/*function i(str){
     return parseInt(str)
-}
+}*/
 
-function renderchessboard(){
+function renderchessboard(buttonson=true){
     let chessboard = document.getElementById('chessboard')
     chessboard.innerHTML = ''
 
@@ -24,16 +24,24 @@ function renderchessboard(){
     for (let y=0; y<8; y++){
         tr = document.createElement('tr')
 
-        let span = document.createElement('span')
+        /*let span = document.createElement('span')
         span.innerHTML = y
         span.classList = 'sidetext'
-        tr.appendChild(span)
+        tr.appendChild(span)*/
 
         for (let x=0; x<8; x++){
             let button = document.createElement('button')
-            button.innerHTML = '<b>' + String(position[y*10+x]) + '</b>'
+            //button.innerHTML = '<b>' + String(position[y*10+x]) + '</b>'
+
+            if (position[y*10+x] != ''){
+                button.innerHTML = '<img src="https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/' + s(position[y*10+x][0]) + s(position[y*10+x][1]).toUpperCase() + '.svg">'
+            }
+
             button.classList = 'button '
-            button.addEventListener("click", () => onclicksquare(x, y))
+
+            if (buttonson){
+                button.addEventListener("click", () => onclicksquare(x, y))
+            }
 
             if (y*10+x == highlightedsquare){
                 button.classList += 'highlightedsquare'
@@ -57,7 +65,7 @@ function renderchessboard(){
 
     tr = document.createElement('tr')
 
-    for (let x=0; x<8; x++){ // quickly thrown together because I am an idiot
+    /*for (let x=0; x<8; x++){ // quickly thrown together because I am an idiot
         if (x == 0){
             let span = document.createElement('span')
             span.innerHTML = '+'
@@ -73,10 +81,10 @@ function renderchessboard(){
         tr.appendChild(document.createElement('th').appendChild(span))
     }
 
-    chessboard.appendChild(tr)
+    chessboard.appendChild(tr)*/
 }
 
-function listlegalmoves(repeated=false){
+function listlegalmoves(repeated=false, nocastle=false){
     let legalmoves = []
 
     for (let y=0; y<8; y++){
@@ -116,13 +124,13 @@ function listlegalmoves(repeated=false){
                     }
                     
                     if (x != 7){
-                        if (position[coords-9][0] == 'b' || ((x)+1 == enpassant && colorenpassant == 'b')){
+                        if (position[coords-9][0] == 'b' || (coords-9 == enpassant && colorenpassant == 'b')){
                             legalmoves.push([coords, coords-9])
                         }
                     }
 
                     if (x != 0){
-                        if (position[coords-11][0] == 'b' || ((x)-1 == enpassant && colorenpassant == 'b')){
+                        if (position[coords-11][0] == 'b' || (coords-11 == enpassant && colorenpassant == 'b')){
                             legalmoves.push([coords, coords-11])
                         }
                     }
@@ -138,13 +146,13 @@ function listlegalmoves(repeated=false){
                     }
                     
                     if (x != 0){
-                        if (position[coords+9][0] == 'w' || ((x)-1 == enpassant && colorenpassant == 'w')){
+                        if (position[coords+9][0] == 'w' || (coords+9  == enpassant && colorenpassant == 'w')){
                             legalmoves.push([coords, coords+9])
                         }
                     }
 
                     if (x != 7){
-                        if (position[coords+11][0] == 'w' || ((x)+1 == enpassant && colorenpassant == 'w')){
+                        if (position[coords+11][0] == 'w' || (coords+11 == enpassant && colorenpassant == 'w')){
                             legalmoves.push([coords, coords+11])
                         }
                     }
@@ -223,6 +231,29 @@ function listlegalmoves(repeated=false){
                         legalmoves.push([coords, coords+numberchanges[j]])
                     }
                 }
+
+
+                if (!nocastle){
+                    if (!isattacked(coords, true, true)){
+                        // not in check
+
+                        let castles = []
+
+                        if (whitesturn){
+                            castles = whitescastles
+                        } else {
+                            castles = blackscastles
+                        }
+
+                        for (let c=0; c<castles.length; c++){
+                            let move = Math.ceil((castles[c] - coords)/4)
+
+                            if (!isattacked(coords+move, true, true) && !isattacked(coords+move*2, true, true) && position[coords+move] == '' && position[coords+move*2] == ''){
+                                legalmoves.push([coords, castles[c]])
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -280,12 +311,12 @@ function isinbounds(where){
 }
 
 function moveinarray(arr, item){
-    for (let i=0; i<arr.length; i++){
-        if (arr[i][0] == item[0] && arr[i][1] == item[1]){
-            return true
+    for (let m=0; m<arr.length; m++){
+        if (arr[m][0] == item[0] && arr[m][1] == item[1]){
+            return m
         }
     }
-    return false
+    return arr.length
 }
 
 function onclicksquare(x, y){
@@ -298,7 +329,9 @@ function onclicksquare(x, y){
             let legalmoves = listlegalmoves()
             console.log(legalmoves)
 
-            if (moveinarray(legalmoves, [highlightedsquare, y*10+x])){
+            miaout = moveinarray(legalmoves, [highlightedsquare, y*10+x])
+
+            if (miaout != legalmoves.length){
                 domove(highlightedsquare, y*10+x, true)
             }
 
@@ -319,36 +352,84 @@ function domove(from, to, forreal=false){
 
         position[to-10] = ''
     } else {
-        enpassant = 8
-        colorenpassant = ''
-    }
-
-    if (position[from][1] == 'k'){
-        if (position[from][0] == 'w'){
-            whitescastles = []
-        } else {
-            blackscastles = []
+        if (forreal){
+            enpassant = maxvalue
+            colorenpassant = ''
         }
     }
 
-    position[to] = position[from]
-    position[from] = ''
+    if (forreal){
+        if (position[from][1] == 'k'){ // king move
+            if (position[from][0] == 'w'){
+                whitescastles = []
+            } else {
+                blackscastles = []
+            }
+        }
+
+        if (position[from][1] == 'r'){
+            if (whitescastles.includes(from)){ // rook move
+                whitescastles.splice(whitescastles.indexOf(from), 1)
+            }
+
+            if (blackscastles.includes(from)){ // rook move
+                blackscastles.splice(blackscastles.indexOf(from), 1)
+            }
+        }
+
+        if (whitescastles.includes(to)){
+            whitescastles.splice(whitescastles.indexOf(to), 1) // taking the rook
+        }
+
+        if (blackscastles.includes(to)){
+            blackscastles.splice(blackscastles.indexOf(to), 1) // taking the rook
+        }
+        
+        if (position[from] == 'wp' && from - 20 == to){
+            enpassant = to + 10 ** (dimentions-1)
+            colorenpassant = 'w'
+        }
+
+        if (position[from] == 'bp' && from + 20 == to){
+            enpassant = to - 10 ** (dimentions-1)
+            colorenpassant = 'b'
+        }
+    }
+
+    if (position[from][1] == 'k' && position[to][1] == 'r' && position[from][0] == position[to][0]){
+        // castle
+
+        position[from + absolute1(to-from)] = position[to]
+        position[to] = ''
+
+        position[from + absolute1(to-from)*2] = position[from]
+        position[from] = ''
+    } else {
+        position[to] = position[from]
+        position[from] = ''
+    }
+
 
     if (turnsystem){
         whitesturn = !whitesturn
     }
-        
-    if (position[to] == 'wp' && from - 20 == to){
-        enpassant = to%10
-        colorenpassant = 'w'
-    }
-
-    if (position[to] == 'bp' && from + 20 == to){
-        enpassant = to%10
-        colorenpassant = 'b'
-    }
 
     if (forreal){
+        let hash = JSON.stringify(position) // I was gonna hash it, but it turns out that you can't just make a function that outputs the sha256 hash of something,
+                                            // no you have to make a function that is gonna return some weird type and it's super annoying
+
+        boardhashes.push(hash)
+
+        if (boardhashes.filter(x => x == hash).length == 3){
+            document.getElementById('gamestate').innerHTML = 'Threefold repetition! Draw!'
+            renderchessboard(false)
+        }
+
+        if (position.filter(x => x != '').length < 3){
+            document.getElementById('gamestate').innerHTML = 'Insufficient material! Draw!'
+            renderchessboard(false)
+        }
+
         if (listlegalmoves().length == 0){
             let kingsposition = 100
 
@@ -368,8 +449,6 @@ function domove(from, to, forreal=false){
                 }
             }
 
-            console.log(kingsposition)
-
             if (isattacked(kingsposition)){
                 if (whitesturn){
                     document.getElementById('gamestate').innerHTML = 'Checkmate! Black wins!'
@@ -379,16 +458,60 @@ function domove(from, to, forreal=false){
             } else {
                 document.getElementById('gamestate').innerHTML = 'Stalemate! Draw!'
             }
+
+            renderchessboard(false)
         }
     }
 }
 
-function isattacked(space, onnextturn=true){
+const getSHA256Hash = async (input) => {
+    const textAsBuffer = new TextEncoder().encode(input);
+    const hashBuffer = await window.crypto.subtle.digest("SHA-256", textAsBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hash = hashArray
+        .map((item) => item.toString(16).padStart(2, "0"))
+        .join("");
+    return hash;
+};
+  
+
+function howfaraway(from, to, mode1=false){
+    let fmt = to-from
+
+    let repetitions = 0
+
+    while (true){
+        if (Math.abs(fmt).toString().length == 1){
+            if (mode1){
+                fmt = 1
+            }
+            return fmt * (10 ** repetitions)
+        }
+
+        if (fmt.toString().includes('.')){
+            console.log('If this runs, the code is broken')
+            return
+        }
+
+        repetitions += 1
+        fmt = fmt/10
+    }
+}
+
+function absolute1(number){
+    if (number.toString().includes('-')){
+        return -1
+    } else {
+        return 1
+    }
+}
+
+function isattacked(space, onnextturn=true, nocastled=false){
     if (onnextturn){
         whitesturn = !whitesturn
     }
 
-    let secondlegalmoves = listlegalmoves(true)
+    let secondlegalmoves = listlegalmoves(true, nocastled)
 
     for (let j=0; j < secondlegalmoves.length; j++){
         if (secondlegalmoves[j][1] == space){
@@ -407,16 +530,20 @@ function isattacked(space, onnextturn=true){
     return false
 }
 
+let dimentions = 2
+
+let maxvalue = 10 ** dimentions
+
 let turnsystem = true // turn off when debugging
 
-let highlightedsquare = 100
+let highlightedsquare = maxvalue
 
 let whitesturn = true
 
-let enpassant = 8
+let enpassant = maxvalue
 let colorenpassant = ''
 
-let whitescastles = [80, 88]
+let whitescastles = [70, 77]
 let blackscastles = [0, 8]
 
 let position = ['br', 'bn', 'bb', 'bq', 'bk', 'bb', 'bn', 'br' ,'', '',
@@ -427,5 +554,7 @@ let position = ['br', 'bn', 'bb', 'bq', 'bk', 'bb', 'bn', 'br' ,'', '',
                 '',   '',   '',   '',   '',   '',   '',   '',   '', '',
                 'wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp', '', '', 
                 'wr', 'wn', 'wb', 'wq', 'wk', 'wb', 'wn', 'wr', '', '']
+
+let boardhashes = [JSON.stringify(position)]
 
 renderchessboard()
