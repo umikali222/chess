@@ -1,5 +1,11 @@
-function s(int){
-    return String(int)
+function s(int, padify=false){
+    let str = String(int)
+
+    if (padify){
+        str = str.padStart(dimentions, '0')
+    }
+
+    return str
 }
 
 /*function i(str){
@@ -12,7 +18,7 @@ function renderchessboard(buttonson=true){
 
     let tr = document.createElement('tr')
 
-    legalmoves = listlegalmoves()
+    let legalmoves = listlegalmoves()
     legalmovesfromhighlightedsquare = []
 
     for (let lm=0; lm<legalmoves.length; lm++){
@@ -34,7 +40,7 @@ function renderchessboard(buttonson=true){
             //button.innerHTML = '<b>' + String(position[y*10+x]) + '</b>'
 
             if (position[y*10+x] != ''){
-                button.innerHTML = '<img src="https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/' + s(position[y*10+x][0]) + s(position[y*10+x][1]).toUpperCase() + '.svg">'
+                button.innerHTML = '<img src="https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/' + s(position[y*10+x][0]) + s(position[y*10+x][1]).toUpperCase() + '.svg" alt="' + position[y*10+x] +'">'
             }
 
             button.classList = 'button '
@@ -122,14 +128,16 @@ function listlegalmoves(repeated=false, nocastle=false){
                             legalmoves.push([coords, coords-20])
                         }
                     }
+
+                    //console.log(coords)
                     
-                    if (x != 7){
+                    if (x != 7 && y != 0){
                         if (position[coords-9][0] == 'b' || (coords-9 == enpassant && colorenpassant == 'b')){
                             legalmoves.push([coords, coords-9])
                         }
                     }
 
-                    if (x != 0){
+                    if (x != 0 && y != 0){
                         if (position[coords-11][0] == 'b' || (coords-11 == enpassant && colorenpassant == 'b')){
                             legalmoves.push([coords, coords-11])
                         }
@@ -258,13 +266,54 @@ function listlegalmoves(repeated=false, nocastle=false){
         }
     }
 
-    if (!repeated){
-        let kingsposition = 100
+    //console.log('before')
+    //console.log(legalmoves)
+
+    for (let i=0; i<legalmoves.length; i++){
+        if (legalmoves[i].length > 2){
+            continue
+        }
+
+        if (position[legalmoves[i][0]][1] == 'p'){
+            let tempy = s(legalmoves[i][1], true)[0]
+
+            //console.log(tempy)
+
+            if (tempy == 0 || tempy == 7){
+                let move = legalmoves[i]
+
+                legalmoves.push([...move, 'q'])
+                legalmoves.push([...move, 'r'])
+                legalmoves.push([...move, 'n'])
+                legalmoves.push([...move, 'b'])
+
+
+                //console.log(move)
+
+                //console.log('oh my god I am an imbecyle')
+            }
+        }
+    }
+
+    //console.log('after')
+    //console.log(legalmoves)
+    //console.log()
+
+    /*if (!repeated){
+        let kingsposition = maxvalue
 
         for (let l=0; l < legalmoves.length; l++){
             const backupposition = [...position]
 
-            domove(legalmoves[l][0], legalmoves[l][1])
+            let piecepromote = 'p'
+
+            if (legalmoves[l].length == 3){
+                piecepromote == legalmoves[l][2]
+            }
+
+            //console.log(legalmoves[l])
+
+            domove(legalmoves[l][0], legalmoves[l][1], piecepromote)
 
             for (let y=0; y<8; y++){
                 for (let x=0; x<8; x++){
@@ -293,6 +342,10 @@ function listlegalmoves(repeated=false, nocastle=false){
 
             position = backupposition
         }
+    }*/
+
+    if (!repeated){
+        console.log(legalmoves)
     }
 
     return legalmoves
@@ -313,44 +366,70 @@ function isinbounds(where){
 function moveinarray(arr, item){
     for (let m=0; m<arr.length; m++){
         if (arr[m][0] == item[0] && arr[m][1] == item[1]){
+            if (item.length == 3){
+                if (arr[m][2] != item[2]){
+                    continue
+                }
+            }
+
             return m
         }
     }
     return arr.length
 }
 
+
+function choosepromotionpiece(){
+    const promotiondiv = document.getElementById('promotiondiv')
+
+    promotiondiv.innerHTML = `
+                <button class="button"><img src="https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wQ.svg" alt="ms. king"></button> <br>
+                <button class="button"><img src="https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wR.svg" alt="the mini ashtray"></button> <br>
+                <button class="button"><img src="https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wB.svg" alt="slitface"></button> <br>
+                <button class="button"><img src="https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wN.svg" alt="dr. horse"></button> <br></br>`
+
+    sleep(1000)
+
+    promotiondiv.innerHTML = ''
+}
+
 function onclicksquare(x, y){
     if (y*10+x == highlightedsquare){
-        highlightedsquare = 100
+        highlightedsquare = maxvalue
     } else {
-        if (highlightedsquare == 100){
+        if (highlightedsquare == maxvalue){
             highlightedsquare = y*10+x
         } else {
             let legalmoves = listlegalmoves()
-            console.log(legalmoves)
+
+            /*sleep(1000)
+
+            document.getElementById('promotiondiv').style.visibility = 'hidden'*/
 
             miaout = moveinarray(legalmoves, [highlightedsquare, y*10+x])
 
             if (miaout != legalmoves.length){
-                domove(highlightedsquare, y*10+x, true)
+                domove(highlightedsquare, y*10+x, 'p', true)
             }
 
-            highlightedsquare = 100
+            highlightedsquare = maxvalue
         }
     }
 
     renderchessboard()
 }
 
-function domove(from, to, forreal=false){
+function domove(from, to, piece='p', forreal=false){
+    if (piece != 'p'){
+        console.log(s(from) + s(to))
+        console.log(piece)
+        console.log()
+    }
+
     if (position[from] == 'wp' && (from - 9 == to || from - 11 == to) && position[to+10] == 'bp'){
-        // en passant
-
-        position[to+10] = ''
+        position[to+10] = '' // en passant
     } else if (position[from] == 'bp' && (from + 9 == to || from + 11 == to) && position[to-10] == 'wp'){
-        // en passant
-
-        position[to-10] = ''
+        position[to-10] = '' // en passant
     } else {
         if (forreal){
             enpassant = maxvalue
@@ -407,6 +486,10 @@ function domove(from, to, forreal=false){
     } else {
         position[to] = position[from]
         position[from] = ''
+
+        if (piece != 'p'){
+            position[to][1] == piece
+        }
     }
 
 
@@ -530,6 +613,76 @@ function isattacked(space, onnextturn=true, nocastled=false){
     return false
 }
 
+function perfttest(){
+    console.log(position)
+
+    let positions = [[[position, whitescastles, blackscastles, enpassant, colorenpassant, whitesturn, boardhashes]]]
+
+    console.log([position, whitescastles, blackscastles, enpassant, colorenpassant, whitesturn, boardhashes])
+    console.log(position)
+
+    let depth = 0
+
+    while (true){
+        console.log('Depth: ' + depth.toString() + '   # of positions: ' + positions[depth].length.toString())
+
+        positions.push([])
+        depth += 1
+
+        for (let p=0; p<positions[depth-1].length; p++){
+            let currentpos = positions[depth-1][p]
+
+            position       = currentpos[0]
+            whitescastles  = currentpos[1]
+            blackscastles  = currentpos[2]
+            enpassant      = currentpos[3]
+            colorenpassant = currentpos[4]
+            whitesturn     = currentpos[5]
+            boardhashes    = currentpos[6]
+
+            console.log(depth)
+            renderchessboard()
+
+            let legalmoves = listlegalmoves()
+
+            //console.log(legalmoves)
+
+            for (let l=0; l < legalmoves.length; l++){
+                position       = currentpos[0]
+                whitescastles  = currentpos[1]
+                blackscastles  = currentpos[2]
+                enpassant      = currentpos[3]
+                colorenpassant = currentpos[4]
+                whitesturn     = currentpos[5]
+                boardhashes    = currentpos[6]
+
+                let piecepromote = 'p'
+
+                if (legalmoves[l].length == 3){
+                    piecepromote == legalmoves[l][2]
+                }
+
+                console.log('just in case')
+                domove(legalmoves[l][0], legalmoves[l][1], piecepromote, true)
+
+                positions[depth].push([position, whitescastles, blackscastles, enpassant, colorenpassant, whitesturn, boardhashes])
+            }
+
+            sleep(1000)
+        }
+        sleep(1000)
+    }
+}
+
+function sleep(milliseconds) { // https://stackoverflow.com/questions/1183872/put-a-delay-in-javascript#1183886
+    var start = new Date().getTime();
+    for (var i = 0; i < 1e7; i++) {
+        if ((new Date().getTime() - start) > milliseconds){
+            break;
+        }
+    }
+}
+
 let dimentions = 2
 
 let maxvalue = 10 ** dimentions
@@ -544,7 +697,9 @@ let enpassant = maxvalue
 let colorenpassant = ''
 
 let whitescastles = [70, 77]
-let blackscastles = [0, 8]
+let blackscastles = [0, 7]
+
+//let legalmoves = []
 
 let position = ['br', 'bn', 'bb', 'bq', 'bk', 'bb', 'bn', 'br' ,'', '',
                 'bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp' ,'', '', 
